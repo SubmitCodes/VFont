@@ -43,8 +43,8 @@ See [emoji findings](docs/emoji.md).
 
 ## Install and use
 
-1. Install the APK from [Releases](https://github.com/SubmitCodes/VFont/releases).
-   The initial preview is signed with the developer's local debug certificate.
+1. Build and install a local APK using the instructions below. **No APK is
+   published yet.** Local preview builds use Android's debug signing certificate.
 2. Start Shizuku through your manager, open **VFont**, tap **Connect**, and grant access.
 3. Once, tap **Set up Game Cube**, find **VFont** in the supported-games list and
    enable its switch. The APK advertises itself as a game; this firmware still

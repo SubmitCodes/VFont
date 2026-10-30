@@ -21,9 +21,9 @@ firmware PD2454B_A_17.2.10.6.W10 and Game Cube 15.0.05.01_de, on 2026-10-31.
   path and loaded with Android's native Typeface builder.
 - COLRv0 and COLRv1 glyphs rendered the expected green pixels, not fallback emoji.
 - Two activity recreations restarted the Rust UI without the previous ANR.
-- The public VFont 0.2.0 APK (version code 7) repeated the ten-import,
+- The locally built VFont 0.2.0 APK (version code 7) repeated the ten-import,
   color-pixel and two-recreation checks successfully. Its installed bytes
-  matched the release APK. The separate test APK was removed afterward.
+  matched the PC build output. The separate test APK was removed afterward.
 - The user's original CFF OTF applied through Vivo's native font slot and was
   restored to the prior TTF afterward. The active file/hash were verified.
 - A combined text/COLRv0 emoji probe changed a glyph in both default Android
