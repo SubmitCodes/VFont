@@ -1,0 +1,31 @@
+[package]
+name = "vfont"
+version = "0.2.0"
+edition = "2021"
+description = "Local Rust font importer for verified Vivo OriginOS firmware"
+repository = "https://github.com/SubmitCodes/VFont"
+
+[lib]
+name = "fontlab"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+ttf-parser = "0.25"
+wuff = "=0.2.9"
+
+[target.'cfg(target_os = "android")'.dependencies]
+eframe = { version = "0.31.1", default-features = false, features = ["default_fonts", "glow", "android-native-activity"] }
+android-activity = { version = "0.6", features = ["native-activity"] }
+jni = "0.21"
+
+[patch.crates-io]
+winit = { path = "vendor/winit" }
+eframe = { path = "vendor/eframe" }
+
+[profile.release]
+lto = "thin"
+strip = true
+panic = "unwind"
