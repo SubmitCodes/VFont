@@ -36,7 +36,7 @@ body:
     id: report
     attributes:
       label: Fresh support report
-      description: After the problem, open Help and about > Device support. Connect Shizuku if possible, tap Check device again, then Review report > Save support report and attach the JSON here. Do not clear history first. If JSON attachment is rejected, ZIP just that JSON. If collection fails, describe that instead. Send the separate system-files ZIP privately only when requested.
+      description: After the problem, open Help and about > Device support. Connect Shizuku if possible, tap Check device again, then Review report > Save support report and attach the JSON here. Do not clear history first. If JSON attachment is rejected, ZIP just that JSON. If collection fails, describe that instead. Do not upload the separate system-files ZIP, stock APKs, firmware, fonts or themes.
   - type: input
     id: shizuku
     attributes:

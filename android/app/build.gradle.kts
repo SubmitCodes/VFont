@@ -14,6 +14,11 @@ val releaseStorePath = signingValue("storeFile", "VFONT_KEYSTORE")
 val releaseStorePass = signingValue("storePassword", "VFONT_KEYSTORE_PASS")
 val releaseKeyAlias = signingValue("keyAlias", "VFONT_KEY_ALIAS")
 val releaseKeyPass = signingValue("keyPassword", "VFONT_KEY_PASS")
+val copyProjectLicense by tasks.registering(Copy::class) {
+    from(rootProject.file("../LICENSE.md"))
+    into(layout.buildDirectory.dir("generated/vfontLicenseAssets"))
+    rename { "VFONT_LICENSE.md" }
+}
 android {
     namespace = "dev.fontlab"
     compileSdk = 36
@@ -21,13 +26,14 @@ android {
         applicationId = "dev.fontlab"
         minSdk = 31
         targetSdk = 35
-        versionCode = 100
+        versionCode = 101
         versionName = appVersion
         testInstrumentationRunner = "dev.fontlab.LifecycleCheck"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86") }
     }
     buildFeatures { aidl = true; buildConfig = true }
     sourceSets.getByName("androidTest").assets.srcDir("../../tests/fixtures")
+    sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/vfontLicenseAssets"))
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -57,6 +63,7 @@ android {
         }
     }
 }
+tasks.named("preBuild") { dependsOn(copyProjectLicense) }
 dependencies {
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")

@@ -49,7 +49,8 @@ release. No device is needed to build.
 
 `Cargo.toml` owns the display version; Gradle reads it for Android's version name.
 Android's separately increasing `versionCode` is in `android/app/build.gradle.kts`.
-The 1.0.0 release uses code **100**, above the earlier development builds.
+The replacement 1.0.0 release uses code **101**, so it can update the original
+1.0.0 build (code 100) without changing the displayed version.
 
 For your own release signing, create ignored `android/keystore.properties`:
 

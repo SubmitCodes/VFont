@@ -4,6 +4,7 @@ version = "1.0.0"
 edition = "2021"
 description = "Native fonts, icons and themes for supported Vivo and iQOO phones"
 repository = "https://github.com/SubmitCodes/VFont"
+license-file = "LICENSE.md"
 
 [lib]
 name = "fontlab"

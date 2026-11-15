@@ -158,10 +158,15 @@ final class Toolbox {
   }
   private void about(LinearLayout content){
     TextView name=text("VFont",34);name.setTextColor(ToolUi.color(palette,"primary"));name.setGravity(Gravity.CENTER);name.setTypeface(null,Typeface.BOLD);content.addView(name,new LinearLayout.LayoutParams(-1,dp(120)));
-    card(content,"Make your phone yours","Version "+BuildConfig.VERSION_NAME+"\nLocal fonts, themes and icons for compatible Vivo and iQOO phones. No root required.");
+    card(content,"Make your phone yours","Version "+BuildConfig.VERSION_NAME+"\nLocal fonts, themes and icons for compatible Vivo and iQOO phones. No root required.\n\nVFont is an independent project, unaffiliated with Vivo or iQOO.");
     card(content,"A place for every tool","Tools are grouped into categories, with their own pages. Search by what you want to change. Long-press a tool or tap its Help icon to learn what it does, what it needs and how to restore it.");
+    action(content,"VFont license","Komorebi License 2.0.0, covering VFont's own code.",()->showLicense("VFont license - Komorebi 2.0.0","VFONT_LICENSE.md"));
     card(content,"Design credits","The grouped cards, pastel icon wells, floating navigation and help presentation adapt Essentials by Sameera Sandakelum / sameerasw.com, under the MIT licence. VFont keeps its own customization and recovery tools.");
-    action(content,"Essentials licence","View the MIT copyright and permission notice included with the adapted interface and icons.",()->{try(InputStream in=owner.getAssets().open("licenses/essentials-MIT.txt")){ToolUi.dialog(owner).setTitle("Essentials · MIT licence").setMessage(readUtf8(in)).setPositiveButton("Done",null).show();}catch(Exception e){Toast.makeText(owner,"Could not open the licence.",Toast.LENGTH_SHORT).show();}});
+    action(content,"Third-party notices","Licenses and attribution for Essentials and the other included components.",()->showLicense("Third-party notices","THIRD_PARTY_NOTICES.txt"));
+  }
+  private void showLicense(String title,String asset){
+    try(InputStream in=owner.getAssets().open(asset)){ToolUi.dialog(owner).setTitle(title).setMessage(readUtf8(in)).setPositiveButton("Done",null).show();}
+    catch(Exception e){Toast.makeText(owner,"Could not open the license.",Toast.LENGTH_SHORT).show();}
   }
   private static String readUtf8(InputStream in)throws IOException{
     ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buf=new byte[4096];int n;

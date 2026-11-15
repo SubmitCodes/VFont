@@ -63,7 +63,7 @@ public final class SupportActivity extends Activity {
     button(advanced,"Export system files (optional)",()->{
       if(busy)return;
       ToolUi.dialog(this).setTitle("Export stock system files?")
-          .setMessage("This separate ZIP contains only fixed Android/Vivo code components and an inventory. It can contain up to 512 MiB before compression. Unreadable or oversized files are listed as skipped.\n\nNo app data, custom fonts, custom icons or personal files are included. Uses Shizuku when connected. Share it privately when requested for investigation.")
+          .setMessage("This separate ZIP contains only fixed Android/Vivo code components and an inventory. It can contain up to 512 MiB before compression. Unreadable or oversized files are listed as skipped.\n\nNo app data, custom fonts, custom icons or personal files are included. Uses Shizuku when connected.\n\nThe archive can contain proprietary vendor code. Keep it local and do not post it on GitHub. Exporting a copy does not grant redistribution rights.")
           .setPositiveButton("Choose ZIP location",(dialog,which)->choose(SAVE_SYSTEM)).setNegativeButton("Cancel",null).show();
     });
     button(advanced,"Clear recent history",()->{if(!busy&&!MainActivity.operationActive())ToolUi.dialog(this).setTitle("Clear VFont history?")

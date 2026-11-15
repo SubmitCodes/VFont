@@ -2,6 +2,11 @@
 
 ## 1.0.0 - 2026-11-15
 
+Re-released with internal Android build **101**: added the Komorebi License 2.0.0
+for VFont's own code, a dedicated VFont license entry in About, separate third-party
+notices, independent-project identification and clearer vendor-code sharing limits.
+The universal APK remains compatible with updates from the original build 100.
+
 First packaged GitHub release. Public versioning starts at 1.0.0; the earlier
 0.x builds were development previews.
 

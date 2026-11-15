@@ -38,8 +38,9 @@ it does not establish that the native operation made no changes.
 
 A separate optional export copies only allowlisted readable stock system
 components, with path, count and byte limits plus a manifest. It does not include
-app data, custom fonts, photos or arbitrary file paths. Use it only when a
-maintainer requests additional compatibility evidence, and share it privately.
+app data, custom fonts, photos or arbitrary file paths. It can still contain
+proprietary vendor code. Keep the ZIP local; do not attach it to GitHub issues or
+redistribute it without the relevant rights. A local export does not grant them.
 
 ## App and repository
 

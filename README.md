@@ -15,6 +15,9 @@ Use your own fonts, icon packs and local Vivo themes through the phone's native
 appearance system. VFont uses Shizuku; it requires no root, bootloader unlock or
 system partition changes.
 
+VFont is an independent project, unaffiliated with or endorsed by Vivo or iQOO.
+Product names identify compatibility only.
+
 **[Download 1.0.0](https://github.com/SubmitCodes/VFont/releases/download/v1.0.0/VFont-1.0.0-universal.apk)** |
 [User guide](docs/guide.md) | [Compatibility](docs/compatibility.md) |
 [Report a problem](https://github.com/SubmitCodes/VFont/issues/new/choose)
@@ -97,6 +100,8 @@ Interface adaptations and dependencies are credited in
 [third-party notices](THIRD_PARTY_NOTICES.txt) and [dependency patches](vendor/PATCHES.md).
 No third-party APK, user font, theme or icon pack is bundled.
 
-**No project license has been selected for VFont's own code.** Public source
-availability does not grant a general reuse license. Third-party components
-retain their respective licenses.
+VFont's own code is provided under the **[Komorebi License 2.0.0](LICENSE.md)**,
+using the same terms as [Stow](https://github.com/SubmitCodes/Stow/blob/main/LICENSE.md).
+Read its permitted-purpose and distribution conditions before reuse.
+Third-party components retain their respective licenses. VFont's project license
+does not grant rights to Vivo software or third-party fonts, themes and icon packs.
