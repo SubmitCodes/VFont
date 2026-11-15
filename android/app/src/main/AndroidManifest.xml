@@ -1,14 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <queries>
-        <package android:name="com.vivo.gamecube" />
+        <package android:name="com.vivo.upslide" />
+        <package android:name="com.bbk.theme" />
+        <package android:name="com.vivo.theme" />
+        <package android:name="com.bbk.lite.theme" />
+        <package android:name="com.vivo.permissionmanager" />
+        <package android:name="com.android.systemui" />
+        <package android:name="com.vivo.aod" />
+        <package android:name="com.bbk.launcher2" />
+        <package android:name="com.android.launcher3" />
+        <package android:name="com.bbk.calendar" />
+        <package android:name="com.android.BBKClock" />
+        <package android:name="com.vivo.livewallpaper.box" />
         <package android:name="moe.shizuku.privileged.api" />
+        <intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent>
+        <intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.HOME" /></intent>
+        <intent><action android:name="org.adw.launcher.THEMES" /></intent>
+        <intent><action android:name="com.gau.go.launcherex.theme" /></intent>
+        <intent><action android:name="com.novalauncher.THEME" /></intent>
+        <intent><action android:name="com.anddoes.launcher.THEME" /></intent>
+        <intent><action android:name="com.teslacoilsw.launcher.THEME" /></intent>
     </queries>
-    <application android:label="VFont" android:allowBackup="false" android:appCategory="game"
+    <application android:label="VFont" android:allowBackup="false"
         android:icon="@drawable/ic_vfont"
         android:theme="@android:style/Theme.Material.NoActionBar"
         android:supportsRtl="true">
+        <activity android:name=".ApplyActivity" android:exported="false"
+            android:excludeFromRecents="true"
+            android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|uiMode|density|fontScale" />
+        <activity android:name=".SupportActivity" android:exported="false" />
+        <activity android:name=".ToolboxActivity" android:exported="false"
+            android:enableOnBackInvokedCallback="true"
+            android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|uiMode|density|fontScale"
+            android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".ThemesActivity" android:exported="false"
+            android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|uiMode|density|fontScale" />
+        <activity android:name=".IconsActivity" android:exported="false"
+            android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|uiMode|density|fontScale" />
         <activity android:name=".MainActivity" android:exported="true"
+            android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTask"
             android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|uiMode|density|fontScale"
             android:windowSoftInputMode="adjustResize">

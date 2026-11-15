@@ -1,65 +1,33 @@
-# Development
+# Contributing
 
-Start with the portable Rust checks in README.md. Cargo.lock is committed;
-vendored dependency edits are limited to the changes in vendor/PATCHES.md.
+Start with the [build guide](docs/building.md), [compatibility requirements](docs/compatibility.md)
+and [native integration notes](docs/how-it-works.md).
 
-## Android verification
+## Report a problem
 
-Build and install the matching app APK first. With an explicitly selected,
-authorized test device, install the **separate test APK** and run:
+Use the [device-support issue form](https://github.com/SubmitCodes/VFont/issues/new/choose).
+Include the app version, phone model, ROM/build, steps, visible result and whether
+Restore worked. Attach a fresh support report if possible. Read the
+[report privacy notes](docs/diagnostics.md) and remove personal material from any
+screenshots before posting. Share optional system-code bundles privately only
+when requested.
 
-```sh
-cd android
-./gradlew :app:assembleDebugAndroidTest
-adb -s YOUR_SERIAL install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-adb -s YOUR_SERIAL shell am instrument -w dev.fontlab.test/dev.fontlab.LifecycleCheck
-```
+## Propose a change
 
-On Windows, use `gradlew.bat`. The phone must be unlocked. The test imports ten
-synthetic fixtures through the real Rust JNI path, loads them with Android's
-Typeface builder, checks custom green COLRv0/COLRv1 glyph pixels, and recreates
-the activity twice. It never changes the system font or phone settings.
-The test APK can be removed afterward with `adb -s YOUR_SERIAL uninstall dev.fontlab.test`.
+Keep changes focused and describe the problem and resulting behavior. Separate
+build/static checks from actual device observations. For native changes, explain
+how originals and recovery remain protected, including the failure path.
+Do not claim new-device compatibility from a matching API alone.
 
-An optional Android lint check is:
+Preserve caller checks, path/size/hash validation, transaction journals and
+restoration. Do not add arbitrary shell commands, exported command receivers,
+telemetry or networking. Keep font preparation in Rust and platform integration
+in Java. Existing package/library identities must stay compatible with updates.
 
-```sh
-cargo clippy --locked --target aarch64-linux-android --lib -- -D warnings
-```
+Private validation suites and device investigations are intentionally not part
+of the public repository. Do not submit personal fonts, screenshots, device
+identifiers, raw logs, stock-code bundles, APKs, signing material or machine paths.
+Distributable APKs belong in GitHub Releases.
 
-Live font transactions require a separately agreed test plan, a verified
-baseline target/hash, a native preview, and restoration afterward. Do not widen
-the firmware guard based only on a model name or a successful import preview.
-Never use flashing, system partition changes, package downgrades, or destructive
-commands to test this workflow. Preserve transaction replay markers.
-
-## Fixtures
-
-The committed fixtures contain simple rectangles created by
-`tests/generate_fonts.py`, with TTF/CFF, a two-face collection, WOFF/WOFF2,
-a variable axis and COLRv0/COLRv1 color tables. They contain no user/device fonts.
-Regenerate in an isolated Python environment with `fonttools[woff]==4.60.1`:
-
-```sh
-python tests/generate_fonts.py
-```
-
-Android tests read this same fixture directory through Gradle's test assets
-source set; no duplicate asset copies are maintained. Keep generated fixtures
-small and deterministic. The public APK does not bundle the test fonts.
-
-## Scope
-
-Keep font parsing and transaction decisions in Rust; Java handles Android-only
-APIs. Do not add arbitrary command execution, exported command receivers,
-telemetry, networking, or generalized privileged file operations. Avoid adding
-support for a format merely by accepting its extension: prepare and validate
-its actual content and test Android loading.
-
-Do not commit phone screenshots, raw logs, serial numbers, private fonts,
-compiled APKs, machine-specific SDK paths, credentials or signing keys. The
-ignored `verification/` and `dist/` directories are for local evidence/builds.
-This repository currently has no project license; retain all third-party notices.
-After changing dependencies, regenerate the root and APK notices with
-`python scripts/notices.py`. Supplemental upstream texts are kept in
-`docs/third-party/`; bundled UI-font licenses are included in the generated notices.
+No project license has been selected for VFont's own code. Third-party licenses
+and notices must be retained.

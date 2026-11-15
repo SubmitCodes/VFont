@@ -1,0 +1,44 @@
+name: Device support or a failed customization
+description: Report a font, icon or theme problem, or share device compatibility.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Only the documented device and firmware have been physically verified. Other phones use experimental capability checks.
+        Please keep VFont installed while its icon backups are needed. A failed or interrupted operation is not proof that nothing changed.
+  - type: input
+    id: device
+    attributes:
+      label: Phone and ROM
+      description: Model, CN/global ROM and firmware version.
+    validations:
+      required: true
+  - type: dropdown
+    id: feature
+    attributes:
+      label: Feature
+      options:
+        - Fonts
+        - Icons
+        - Themes and wallpaper
+        - Connection or device report
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: What happened?
+      description: Include VFont version, what you tapped, the visible error/result and whether Restore worked. A screenshot can help with rendering problems; check it for personal information first.
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Fresh support report
+      description: After the problem, open Help and about > Device support. Connect Shizuku if possible, tap Check device again, then Review report > Save support report and attach the JSON here. Do not clear history first. If JSON attachment is rejected, ZIP just that JSON. If collection fails, describe that instead. Send the separate system-files ZIP privately only when requested.
+  - type: input
+    id: shizuku
+    attributes:
+      label: Shizuku implementation and startup mode
+      description: For example, Shizuku via Wireless debugging or ADB. VFont requires shell mode (UID 2000), not root or Device Owner mode.

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title description">
+  <title id="title">VFont</title>
+  <desc id="description">Fonts, icons and themes for supported Vivo and iQOO phones.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#15191e"/>
+      <stop offset="1" stop-color="#232d2a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="320" rx="28" fill="url(#background)"/>
+  <circle cx="1110" cy="32" r="168" fill="#b5f36f" opacity=".04"/>
+  <circle cx="1168" cy="306" r="238" fill="#abc7ff" opacity=".04"/>
+  <rect x="64" y="76" width="168" height="168" rx="38" fill="#15191e" stroke="#36463c"/>
+  <g transform="translate(64 76) scale(1.5556)">
+    <path fill="#b5f36f" d="M23 28h16l15 43 15-43h16L62 92H46z"/>
+    <path fill="#f8f7f3" d="M77 79h13v13H77z"/>
+  </g>
+  <g font-family="Inter,Segoe UI,Arial,sans-serif">
+    <text x="280" y="150" font-size="64" font-weight="700" letter-spacing="-2" fill="#f8f7f3">VFont</text>
+    <text x="282" y="196" font-size="27" fill="#b5f36f">Fonts. Icons. Themes.</text>
+    <text x="282" y="238" font-size="20" fill="#bdc7c0">Native customization for supported Vivo and iQOO phones.</text>
+    <rect x="1000" y="64" width="126" height="40" rx="20" fill="#b5f36f"/>
+    <text x="1063" y="91" text-anchor="middle" font-size="19" font-weight="700" fill="#18220e">1.0.0</text>
+  </g>
+</svg>

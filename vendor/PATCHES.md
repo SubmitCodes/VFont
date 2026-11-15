@@ -9,10 +9,8 @@ Vendored from the crates.io packages already pinned in Cargo.lock:
 - eframe 0.31.1 (MIT OR Apache-2.0): shutdown accepts an absent Android window
   after Suspended, and restores the EGL context without a surface for GL cleanup.
 
-These patches affect the app UI, not Vivo or Shizuku. The device check in
-android/app/src/androidTest/java/dev/fontlab/LifecycleCheck.java recreates the
-real activity twice and waits for the Rust UI to initialize each time. It never
-changes fonts or system settings.
+These patches affect the app UI, not Vivo or Shizuku. Validation included real
+activity recreation and waiting for the Rust UI to initialize after each return.
 
 Upstream sources:
 https://github.com/rust-windowing/winit/tree/v0.30.13

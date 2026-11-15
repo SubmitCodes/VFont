@@ -1,6 +1,6 @@
 use crate::{
     font,
-    transaction::{self, FontState, ACTIVE, BUILD, GAME, ROBOTO},
+    transaction::{self, FontState, ACTIVE},
     ui,
 };
 use jni::{
@@ -15,8 +15,7 @@ use std::{
     os::{fd::FromRawFd, unix::fs::OpenOptionsExt},
     process::Command,
     sync::{Mutex, OnceLock},
-    thread,
-    time::{Duration, Instant},
+    time::Instant,
 };
 
 static VM: OnceLock<JavaVM> = OnceLock::new();
@@ -99,6 +98,30 @@ pub extern "system" fn Java_dev_fontlab_MainActivity_nativeValidate(
         Err(e) => json!({"ok":false,"message":e}),
     };
     string_result(&env, value)
+}
+
+#[no_mangle]
+pub extern "system" fn Java_dev_fontlab_MainActivity_nativeValidateFd(
+    env: JNIEnv,
+    _: JClass,
+    fd: jint,
+) -> jstring {
+    // Ownership of this descriptor was transferred by ParcelFileDescriptor.detachFd().
+    let input = (fd >= 0).then(|| unsafe { File::from_raw_fd(fd) });
+    let result = (|| -> Result<Value, String> {
+        let mut bytes = Vec::new();
+        input
+            .ok_or("Cannot open font.")?
+            .take(font::MAX_FONT_BYTES as u64 + 1)
+            .read_to_end(&mut bytes)
+            .map_err(|e| e.to_string())?;
+        let info = font::validate(&bytes)?;
+        Ok(json!({"ok":true,"font":info}))
+    })();
+    string_result(
+        &env,
+        result.unwrap_or_else(|message| json!({"ok":false,"message":message})),
+    )
 }
 
 #[no_mangle]
@@ -204,29 +227,67 @@ fn command(program: &str, args: &[&str]) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&result.stdout).trim().to_owned())
 }
 
-fn compatibility() -> Result<(), String> {
-    if command("/system/bin/getprop", &["ro.product.model"])? != "V2454A" {
-        return Err("This version supports the tested Vivo X200 Ultra (V2454A).".into());
-    }
-    if command("/system/bin/getprop", &["ro.build.display.id"])? != BUILD {
-        return Err("This firmware has not been verified. No font changes were made.".into());
-    }
-    let package = command("/system/bin/dumpsys", &["package", "com.vivo.gamecube"])?;
-    if !package
-        .lines()
-        .any(|l| l.trim() == "versionName=15.0.05.01_de")
+fn compatibility(env: &mut JNIEnv, service: &JObject) -> Result<Value, String> {
+    let transport = env
+        .call_method(service, "checkTransport", "()Ljava/lang/String;", &[])
+        .map_err(|e| bridge_error(env, e))?
+        .l()
+        .map_err(|e| e.to_string())?;
+    let transport: String = env
+        .get_string(&JString::from(transport))
+        .map_err(|e| e.to_string())?
+        .into();
+    let mut profile: Value = serde_json::from_str(&transport).map_err(|e| e.to_string())?;
+    let maker = command("/system/bin/getprop", &["ro.product.manufacturer"])?;
+    let sdk = command("/system/bin/getprop", &["ro.build.version.sdk"])?;
+    if !matches!(maker.to_ascii_lowercase().as_str(), "vivo" | "iqoo")
+        || command("/system/bin/am", &["get-current-user"])? != "0"
     {
-        return Err("Game Cube version differs from the tested build.".into());
+        return Err("Requires a compatible Vivo/iQOO ROM and the main user.".into());
     }
-    Ok(())
-}
-
-fn game_active() -> bool {
-    command(
-        "/system/bin/settings",
-        &["--user", "0", "get", "system", "current_game_package"],
-    )
-    .is_ok_and(|name| name == GAME)
+    if sdk.parse::<u32>().unwrap_or(0) < 34 {
+        return Err(
+            "Native font changes currently require Android 14 or later. You can still export a Device Support report."
+                .into(),
+        );
+    }
+    for (path, target) in [
+        ("/system/fonts/VivoFont.ttf", ACTIVE),
+        ("/system/etc/fonts.xml", "/data/vfonts/fonts.xml"),
+    ] {
+        if !fs::read_link(path).is_ok_and(|p| p.to_str() == Some(target)) {
+            return Err(
+                "This ROM uses a different native font layout. No changes were made.".into(),
+            );
+        }
+    }
+    let config = fs::read_link("/data/vfonts/fonts.xml")
+        .map_err(|e| format!("Cannot inspect Vivo's font configuration: {e}"))?;
+    if !config.to_str().is_some_and(transaction::allowed_config) {
+        return Err("Vivo's font configuration is outside the supported system files. No changes were made.".into());
+    }
+    font::validate(&read_font(ACTIVE)?)?;
+    let active_target = fs::read_link(ACTIVE)
+        .ok()
+        .and_then(|p| p.to_str().map(str::to_owned));
+    // Status and probes need the same saved recovery font as Apply/Restore.
+    let recorded_stock = env
+        .call_method(service, "readDefaultFont", "()Ljava/lang/String;", &[])
+        .map_err(|e| bridge_error(env, e))?
+        .l()
+        .map_err(|e| e.to_string())?;
+    let recorded_stock = text(env, JString::from(recorded_stock))?;
+    let stock = transaction::system_font(active_target.as_deref(), &recorded_stock, |path| {
+        std::path::Path::new(path).exists()
+    })?;
+    font::validate(&read_font(&stock)?)?;
+    env.call_static_method("dev/fontlab/Platform", "checkFontRefresh", "()V", &[])
+        .map_err(|e| bridge_error(env, e))?;
+    let model = command("/system/bin/getprop", &["ro.product.model"])?;
+    let build = command("/system/bin/getprop", &["ro.build.display.id"])?;
+    profile["model"] = json!(model);
+    profile["build"] = json!(build);
+    Ok(profile)
 }
 
 fn read_font(path: &str) -> Result<Vec<u8>, String> {
@@ -257,30 +318,116 @@ fn state() -> Result<FontState, String> {
     })
 }
 
-fn checked_status() -> Result<Value, String> {
-    compatibility()?;
+fn checked_status(env: &mut JNIEnv, service: &JObject) -> Result<Value, String> {
+    let profile = compatibility(env, service)?;
     let current = state()?;
+    let verified = profile["command_verified"] == true;
     Ok(
-        json!({"ok":true,"message":"Connected · X200 Ultra verified","current":current,"build":BUILD,"game_active":game_active()}),
+        json!({"ok":true,"message":if verified {"Connected. Native font transport checked."}
+            else {"Experimental device support. Test native access before applying a font."},
+        "current":current,"profile":profile,"command_verified":verified}),
     )
 }
 
 fn failure(message: String) -> Value {
-    json!({"ok":false,"message":message,"current":state().ok()})
+    json!({"ok":false,"message":message,"current":state().ok(),"command_verified":false})
 }
 
 #[no_mangle]
 pub extern "system" fn Java_dev_fontlab_FontUserService_nativeStatus(
-    env: JNIEnv,
-    _: JClass,
+    mut env: JNIEnv,
+    service: JObject,
 ) -> jstring {
-    string_result(&env, checked_status().unwrap_or_else(failure))
+    let mut value = checked_status(&mut env, &service).unwrap_or_else(failure);
+    value["supported"] = value["ok"].clone();
+    if value["ok"] != true {
+        value["command_verified"] = json!(false);
+    }
+    string_result(&env, value)
 }
 
 fn bridge_error(env: &mut JNIEnv, error: jni::errors::Error) -> String {
-    let _ = env.exception_describe();
+    let exception = env.exception_occurred().ok();
     let _ = env.exception_clear();
-    format!("Android font bridge failed: {error}")
+    let detail = exception
+        .filter(|exception| !exception.is_null())
+        .and_then(|exception| {
+            env.call_method(exception, "toString", "()Ljava/lang/String;", &[])
+                .ok()
+        })
+        .and_then(|value| value.l().ok())
+        .and_then(|value| env.get_string(&JString::from(value)).ok().map(String::from));
+    let _ = env.exception_clear();
+    format!(
+        "Android font bridge failed: {}",
+        detail.unwrap_or_else(|| error.to_string())
+    )
+}
+
+fn token() -> Result<String, String> {
+    let mut random = [0u8; 16];
+    File::open("/dev/urandom")
+        .and_then(|mut f| f.read_exact(&mut random))
+        .map_err(|e| e.to_string())?;
+    Ok(random.iter().map(|b| format!("{b:02x}")).collect())
+}
+
+fn trigger(env: &mut JNIEnv, service: &JObject, script: &str, tx: &str) -> Result<(), String> {
+    let script = env.new_string(script).map_err(|e| e.to_string())?;
+    let transaction = env.new_string(tx).map_err(|e| e.to_string())?;
+    env.call_method(
+        service,
+        "dispatchFont",
+        "(Ljava/lang/String;Ljava/lang/String;)V",
+        &[JValue::Object(&transaction), JValue::Object(&script)],
+    )
+    .map_err(|e| bridge_error(env, e))?;
+    Ok(())
+}
+
+#[no_mangle]
+pub extern "system" fn Java_dev_fontlab_FontUserService_nativeProbe(
+    mut env: JNIEnv,
+    service: JObject,
+) -> jstring {
+    let result = (|| -> Result<Value, String> {
+        let profile = compatibility(&mut env, &service)?;
+        let before = state()?;
+        let tx = token()?;
+        let _ = fs::create_dir("/storage/emulated/0/Download");
+        let probe_path = transaction::probe_source(&tx)?;
+        let probe_bytes = tx.as_bytes();
+        let probe_hash = font::digest(probe_bytes);
+        let mut probe_file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o644)
+            .open(&probe_path)
+            .map_err(|e| format!("Could not stage temporary access probe: {e}"))?;
+        let probe_guard = SourceFile {
+            path: probe_path,
+            hash: probe_hash.clone(),
+        };
+        probe_file
+            .write_all(probe_bytes)
+            .and_then(|_| probe_file.sync_all())
+            .map_err(|e| e.to_string())?;
+        drop(probe_file);
+        let script = transaction::probe_script(&tx, &probe_hash)?;
+        let outcome = trigger(&mut env, &service, &script, &tx);
+        drop(probe_guard);
+        outcome?;
+        if state()? != before {
+            return Err(
+                "Current font changed during the read-only test. Check it before applying.".into(),
+            );
+        }
+        Ok(
+            json!({"ok":true,"message":"Native font test passed.","current":before,
+            "profile":profile,"command_verified":true,"supported":true}),
+        )
+    })();
+    string_result(&env, result.unwrap_or_else(failure))
 }
 
 struct SourceFile {
@@ -300,17 +447,27 @@ impl Drop for SourceFile {
 
 fn run(
     env: &mut JNIEnv,
+    service: &JObject,
     input: Option<File>,
     expected: &str,
     restore: bool,
+    default_target: &str,
+    phase: &mut &'static str,
 ) -> Result<Value, String> {
-    compatibility()?;
-    if !game_active() {
+    *phase = "layout";
+    let profile = compatibility(env, service)?;
+    if profile["command_verified"] != true {
         return Err(
-            "Add VFont to Ultra Game Mode, return here and check setup before applying.".into(),
+            "Test native access before applying or restoring fonts on this software.".into(),
         );
     }
     let from = state()?;
+    *phase = "input";
+    let recovery_target = transaction::restore_target(default_target, |path| {
+        read_font(path)
+            .and_then(|bytes| font::validate(&bytes).map(|_| ()))
+            .is_ok()
+    })?;
     let bytes = if restore {
         None
     } else {
@@ -327,10 +484,9 @@ fn run(
         Some(bytes)
     };
     let to = if restore {
-        FontState {
-            target: ROBOTO.into(),
-            sha256: font::digest(&read_font(ROBOTO)?),
-        }
+        let target = recovery_target;
+        let sha256 = font::digest(&read_font(&target)?);
+        FontState { target, sha256 }
     } else {
         FontState {
             target: transaction::candidate(expected)?,
@@ -338,17 +494,14 @@ fn run(
         }
     };
     if from.sha256 == to.sha256 {
-        return Ok(
-            json!({"ok":true,"message":"This font is already active. No changes needed.","current":from}),
-        );
+        *phase = "complete";
+        return Ok(json!({"ok":true,"message":"Font already applied.","current":from}));
     }
-    let mut random = [0u8; 16];
-    File::open("/dev/urandom")
-        .and_then(|mut f| f.read_exact(&mut random))
-        .map_err(|e| e.to_string())?;
-    let tx: String = random.iter().map(|b| format!("{b:02x}")).collect();
+    let tx = token()?;
     let script = transaction::script(&from, &to, &tx, !restore)?;
+    *phase = "staging";
     let source_guard = if let Some(bytes) = bytes {
+        let _ = fs::create_dir("/storage/emulated/0/Download");
         let path = transaction::source(&tx)?;
         let mut file = OpenOptions::new()
             .write(true)
@@ -367,81 +520,17 @@ fn run(
     } else {
         None
     };
-    let layer = format!("{GAME}/FontLab_{tx}$({script})");
-    let name = env.new_string(layer).map_err(|e| e.to_string())?;
-    let surface_result = env.call_static_method(
-        "dev/fontlab/Platform",
-        "createSurface",
-        "(Ljava/lang/String;)Ljava/lang/Object;",
-        &[JValue::Object(&name)],
-    );
-    let surface = surface_result
-        .map_err(|e| bridge_error(env, e))?
-        .l()
-        .map_err(|e| e.to_string())?;
-    let outcome = (|| -> Result<(), String> {
-        // Re-enter our own game session so Game Cube discards its previously cached FPS layer.
-        // Showing Home and returning is a normal UI transition; no game database is edited.
-        command(
-            "/system/bin/am",
-            &[
-                "start",
-                "--user",
-                "0",
-                "-W",
-                "-a",
-                "android.intent.action.MAIN",
-                "-c",
-                "android.intent.category.HOME",
-            ],
-        )?;
-        let left = Instant::now();
-        while game_active() && left.elapsed() < Duration::from_secs(4) {
-            thread::sleep(Duration::from_millis(200));
-        }
-        thread::sleep(Duration::from_millis(700));
-        command(
-            "/system/bin/am",
-            &[
-                "start",
-                "--user",
-                "0",
-                "-W",
-                "-a",
-                "android.intent.action.MAIN",
-                "-c",
-                "android.intent.category.LAUNCHER",
-                "-f",
-                "0x10200000",
-                "-n",
-                "dev.fontlab/.MainActivity",
-            ],
-        )?;
-        let start = Instant::now();
-        while start.elapsed() < Duration::from_secs(35) {
-            if fs::read_link(ACTIVE).is_ok_and(|p| p.to_str() == Some(&to.target)) {
-                if state()? == to {
-                    return Ok(());
-                }
-                return Err(
-                    "Font link changed but its checksum did not match. Use Restore Roboto.".into(),
-                );
-            }
-            thread::sleep(Duration::from_millis(350));
-        }
-        Err("Font not applied. Open Game Cube’s CPU/GPU/FPS performance panel and retry. No refresh was sent.".into())
-    })();
-    let released = env
-        .call_static_method(
-            "dev/fontlab/Platform",
-            "releaseSurface",
-            "(Ljava/lang/Object;)V",
-            &[JValue::Object(&surface)],
-        )
-        .map_err(|e| bridge_error(env, e));
+    *phase = "dispatch";
+    let outcome = trigger(env, service, &script, &tx);
     drop(source_guard);
     outcome?;
-    released?;
+    *phase = "verify";
+    if state()? != to {
+        return Err(
+            "Native font receipt did not match the active font. Restore is available.".into(),
+        );
+    }
+    *phase = "refresh";
     let refreshed = env
         .call_static_method(
             "dev/fontlab/Platform",
@@ -465,18 +554,20 @@ fn run(
     if state()? != to {
         return Err("Current font changed during refresh; inspect it before retrying.".into());
     }
+    *phase = "complete";
     Ok(
-        json!({"ok":true,"message":if restore {"Roboto restored."} else {"Font applied. It now uses Vivo’s native rendering."},"current":to,"transaction":tx,"refresh":refresh}),
+        json!({"ok":true,"message":if restore {"System default font restored."} else {"Font applied."},"current":to,"transaction":tx,"refresh":refresh,"profile":profile}),
     )
 }
 
 #[no_mangle]
 pub extern "system" fn Java_dev_fontlab_FontUserService_nativeRun(
     mut env: JNIEnv,
-    _: JClass,
+    service: JObject,
     fd: jint,
     expected: JString,
     restore: jboolean,
+    default_target: JString,
 ) -> jstring {
     // Ownership of this descriptor was transferred by ParcelFileDescriptor.detachFd().
     let input = if fd >= 0 {
@@ -484,8 +575,22 @@ pub extern "system" fn Java_dev_fontlab_FontUserService_nativeRun(
     } else {
         None
     };
-    let result =
-        text(&mut env, expected).and_then(|expected| run(&mut env, input, &expected, restore != 0));
-    let value = result.unwrap_or_else(failure);
+    let started = Instant::now();
+    let mut phase = "input";
+    let result = text(&mut env, expected).and_then(|expected| {
+        let default_target = text(&mut env, default_target).unwrap_or_default();
+        run(
+            &mut env,
+            &service,
+            input,
+            &expected,
+            restore != 0,
+            &default_target,
+            &mut phase,
+        )
+    });
+    let mut value = result.unwrap_or_else(failure);
+    value["diagnostic_stage"] = json!(phase);
+    value["elapsed_ms"] = json!(started.elapsed().as_millis() as u64);
     string_result(&env, value)
 }

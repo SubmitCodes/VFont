@@ -5,19 +5,16 @@ import pathlib
 import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-metadata = json.loads(
-    subprocess.check_output(
-        [
-            "cargo", "metadata", "--locked", "--format-version", "1",
-            "--filter-platform", "aarch64-linux-android",
-        ],
-        cwd=ROOT,
-        text=True,
-    )
-)
-active = {node["id"] for node in metadata["resolve"]["nodes"]}
+resolved = {}
+for target in ("aarch64-linux-android", "armv7-linux-androideabi", "x86_64-linux-android", "i686-linux-android"):
+    metadata = json.loads(subprocess.check_output(
+        ["cargo", "metadata", "--locked", "--format-version", "1", "--filter-platform", target],
+        cwd=ROOT, text=True,
+    ))
+    active = {node["id"] for node in metadata["resolve"]["nodes"]}
+    resolved.update((p["id"], p) for p in metadata["packages"] if p["id"] in active)
 packages = sorted(
-    (p for p in metadata["packages"] if p["id"] in active and p["name"] != "vfont"),
+    (p for p in resolved.values() if p["name"] != "vfont"),
     key=lambda p: (p["name"], p["version"]),
 )
 parts = [
@@ -29,6 +26,8 @@ parts = [
     "Android bridge: Shizuku API/provider 13.1.5, Apache-2.0\n"
     "https://github.com/RikkaApps/Shizuku-API\n"
     "Gradle wrapper 8.14.3, Apache-2.0: https://github.com/gradle/gradle\n\n"
+    "Interface adaptations: Essentials, MIT\n"
+    "https://github.com/sameerasw/essentials\n\n"
     "Resolved Rust packages\n----------------------\n"
 ]
 licenses = {}
@@ -62,6 +61,9 @@ for package in packages:
 
 for path in sorted((ROOT / "docs" / "third-party").glob("*.txt")):
     add_license(f"Supplemental upstream text / {path.name}", path)
+
+for path in sorted((ROOT / "android" / "app" / "src" / "main" / "assets" / "licenses").glob("*.txt")):
+    add_license(f"Bundled component license / {path.name}", path)
 
 parts.append("\nIncluded license texts\n======================\n")
 for content, labels in licenses.items():

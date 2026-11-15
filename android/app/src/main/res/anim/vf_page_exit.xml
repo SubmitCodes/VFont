@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adapted from Essentials' outgoing .92 scale / 200ms fade. -->
+<set xmlns:android="http://schemas.android.com/apk/res/android" android:shareInterpolator="false">
+    <scale android:fromXScale="1" android:toXScale=".92" android:fromYScale="1" android:toYScale=".92" android:pivotX="50%" android:pivotY="50%" android:duration="300" android:interpolator="@android:interpolator/fast_out_slow_in" />
+    <alpha android:fromAlpha="1" android:toAlpha="0" android:duration="200" />
+</set>

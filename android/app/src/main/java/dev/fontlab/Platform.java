@@ -6,21 +6,32 @@ import org.json.JSONObject;
 
 /** Android-only bindings. All paths, hashes and transaction decisions live in Rust. */
 public final class Platform {
-  public static Object createSurface(String name) throws Exception {
-    Class<?> type = Class.forName("android.view.SurfaceControl$Builder");
-    Object builder = type.getConstructor().newInstance();
-    type.getMethod("setName", String.class).invoke(builder, name);
-    type.getMethod("setHidden", boolean.class).invoke(builder, true);
-    Object surface = type.getMethod("build").invoke(builder);
-    if (!Boolean.TRUE.equals(surface.getClass().getMethod("isValid").invoke(surface))) {
-      surface.getClass().getMethod("release").invoke(surface);
-      throw new IllegalStateException("Temporary surface is invalid");
+  /** Read-only: verify the Vivo refresh API before any font transaction. */
+  public static void checkFontRefresh() throws Exception {
+    Object manager = Class.forName("android.app.ActivityManagerNative").getMethod("getDefault").invoke(null);
+    Method get = manager.getClass().getMethod("getConfiguration");
+    get.setAccessible(true);
+    Object configuration = get.invoke(manager);
+    float changed = configuration.getClass().getField("typefaceChanged").getFloat(configuration);
+    float scale = configuration.getClass().getField("fontScale").getFloat(configuration);
+    manager.getClass().getMethod("updatePersistentConfiguration", configuration.getClass());
+    if (!Float.isFinite(changed) || !Float.isFinite(scale) || scale <= 0 || changed + .01f == changed)
+      throw new IllegalStateException("Unsupported Vivo font configuration");
+    try {
+      Object pm = Class.forName("android.app.AppGlobals").getMethod("getPackageManager").invoke(null);
+      if (pm != null) {
+        int status = (Integer) pm.getClass()
+            .getMethod("checkUidPermission", String.class, int.class)
+            .invoke(pm, "android.permission.CHANGE_CONFIGURATION", android.os.Process.myUid());
+        if (status != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+          throw new SecurityException("Missing CHANGE_CONFIGURATION permission for font refresh");
+        }
+      }
+    } catch (SecurityException denied) {
+      throw denied;
+    } catch (ReflectiveOperationException ignored) {
+      // Fallback: older/modified AppGlobals; updatePersistentConfiguration itself will enforce permission.
     }
-    return surface;
-  }
-
-  public static void releaseSurface(Object surface) throws Exception {
-    surface.getClass().getMethod("release").invoke(surface);
   }
 
   public static String refreshFont() throws Exception {
@@ -43,13 +54,18 @@ public final class Platform {
     update.setAccessible(true);
     update.invoke(manager, configuration);
     Object result = get.invoke(manager);
-    if (scale.getFloat(result) != size || changed.getFloat(result) != after) {
+    float actualScale = scale.getFloat(result);
+    float actualChanged = changed.getFloat(result);
+    if (Math.abs(actualScale - size) > 0.001f
+        || actualChanged == before
+        || Math.abs(actualChanged - after) > 0.005f) {
       throw new IllegalStateException("Font refresh read-back differs");
     }
     return new JSONObject()
         .put("before", before)
         .put("after", after)
-        .put("font_scale", size)
+        .put("actual", actualChanged)
+        .put("font_scale", actualScale)
         .toString();
   }
 }
